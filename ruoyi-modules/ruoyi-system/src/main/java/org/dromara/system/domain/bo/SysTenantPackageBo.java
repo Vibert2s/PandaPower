@@ -44,7 +44,7 @@ public class SysTenantPackageBo extends BaseEntity {
      * 备注
      */
     private String remark;
-
+    private Long maxNumberDevices;
     /**
      * 菜单树选择项是否关联显示
      */

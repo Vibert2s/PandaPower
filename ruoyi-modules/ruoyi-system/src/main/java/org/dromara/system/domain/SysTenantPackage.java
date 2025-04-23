@@ -56,5 +56,6 @@ public class SysTenantPackage extends BaseEntity {
      */
     @TableLogic
     private String delFlag;
+    private Long maxNumberDevices;
 
 }

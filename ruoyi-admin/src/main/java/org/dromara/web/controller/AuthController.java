@@ -6,6 +6,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.codec.Base64;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.crypto.SecureUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,8 @@ import org.dromara.common.social.utils.SocialUtils;
 import org.dromara.common.sse.dto.SseMessageDto;
 import org.dromara.common.sse.utils.SseMessageUtils;
 import org.dromara.common.tenant.helper.TenantHelper;
+import org.dromara.system.domain.SysClient;
+import org.dromara.system.domain.bo.SysClientBo;
 import org.dromara.system.domain.bo.SysTenantBo;
 import org.dromara.system.domain.vo.SysClientVo;
 import org.dromara.system.domain.vo.SysTenantVo;
@@ -110,6 +113,56 @@ public class AuthController {
         }, 5, TimeUnit.SECONDS);
         return R.ok(loginVo);
     }
+
+    /**
+     * 设备登录方法连接websocket方法
+     *
+     * @param body 登录信息
+     * @return 结果
+     */
+    @SaIgnore
+    @PostMapping("/devicelogin")
+    public R<LoginVo> devicelogin(@RequestBody String body) {
+        LoginBody loginBody = JsonUtils.parseObject(body, LoginBody.class);
+        String clientId = loginBody.getClientId();
+        //授权类型
+        String grantType = loginBody.getGrantType();
+        SysClientVo client = clientService.queryByClientId(clientId);
+        LoginVo loginVo = null;
+        // 查询不到 client 或 client 内不包含 grantType
+        if (ObjectUtil.isNull(client) || !StringUtils.contains(client.getGrantType(), grantType)) {
+            //查询不到client 则新增一个client
+            SysClientBo sysClientBo=new SysClientBo();
+            sysClientBo.setDeviceType("android");
+            sysClientBo.setClientKey("app");
+            sysClientBo.setClientSecret(loginBody.getUuid());
+            sysClientBo.setGrantTypeList(List.of(grantType));
+            sysClientBo.setStatus(SystemConstants.NORMAL);
+            sysClientBo.setDeviceType("android");
+            sysClientBo.setClientId(SecureUtil.md5(sysClientBo.getClientKey() + sysClientBo.getClientSecret()));
+            sysClientBo.setTimeout(604800L);
+            sysClientBo.setActiveTimeout(1800L);
+            clientService.insertByBo(sysClientBo);
+            client = MapstructUtils.convert(sysClientBo, SysClientVo.class);
+            loginVo = IAuthStrategy.login(body, client, grantType);
+            // 校验租户
+            loginService.checkTenant(loginBody.getTenantId());
+            client = clientService.queryByClientId(clientId);
+        } else if (!SystemConstants.NORMAL.equals(client.getStatus())) {
+            return R.fail(MessageUtils.message("auth.grant.type.blocked"));
+        }
+        return R.ok(loginVo);
+    }
+
+
+
+
+
+
+
+
+
+
 
     /**
      * 获取跳转URL
