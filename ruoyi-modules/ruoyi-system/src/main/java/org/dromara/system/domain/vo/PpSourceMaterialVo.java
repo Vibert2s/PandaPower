@@ -29,7 +29,7 @@ public class PpSourceMaterialVo implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 
+     *
      */
     @ExcelProperty(value = "")
     private Long id;
@@ -46,6 +46,9 @@ public class PpSourceMaterialVo implements Serializable {
     @ExcelProperty(value = "原数据")
     private String originalData;
 
+    @ExcelProperty(value = "文件ID")
+    private String ossId;
+
     /**
      * 类型
      */
@@ -59,6 +62,7 @@ public class PpSourceMaterialVo implements Serializable {
     @ExcelProperty(value = "状态", converter = ExcelDictConvert.class)
     @ExcelDictFormat(dictType = "sys_normal_disable")
     private String status;
-
+    @ExcelProperty(value = "创建时间")
+    private Date createTime;
 
 }

@@ -65,4 +65,5 @@ public interface IPpSourceMaterialService {
      * @return 是否删除成功
      */
     Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid);
+    int updateScStatus(Long id, String status);
 }

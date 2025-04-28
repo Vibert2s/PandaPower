@@ -22,7 +22,7 @@ public class PpSourceMaterial extends TenantEntity {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 
+     *
      */
     @TableId(value = "id")
     private Long id;
@@ -35,7 +35,7 @@ public class PpSourceMaterial extends TenantEntity {
     /**
      * 文件id
      */
-    private Long oosId;
+    private Long ossId;
 
     /**
      * 原数据

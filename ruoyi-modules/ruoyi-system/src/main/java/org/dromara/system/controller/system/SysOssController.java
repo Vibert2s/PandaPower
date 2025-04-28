@@ -2,6 +2,7 @@ package org.dromara.system.controller.system;
 
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.dev33.satoken.annotation.SaIgnore;
 import cn.hutool.core.util.ObjectUtil;
 import org.dromara.common.core.domain.R;
 import org.dromara.common.core.validate.QueryGroup;
@@ -104,5 +105,15 @@ public class SysOssController extends BaseController {
                           @PathVariable Long[] ossIds) {
         return toAjax(ossService.deleteWithValidByIds(List.of(ossIds), true));
     }
-
+    /**
+     * 预览OSS对象
+     *
+     * @param ossId OSS对象ID
+     */
+    @SaIgnore
+    @SaCheckPermission("system:oss:query")
+    @GetMapping("/preview/{ossId}")
+    public void preview(@PathVariable Long ossId, HttpServletResponse response) throws IOException {
+        ossService.preview(ossId, response);
+    }
 }

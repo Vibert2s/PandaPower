@@ -1,7 +1,9 @@
 package org.dromara.system.service;
 
+import cn.hutool.core.lang.tree.Tree;
 import org.dromara.system.domain.vo.PpScGroupVo;
 import org.dromara.system.domain.bo.PpScGroupBo;
+import org.dromara.system.domain.vo.SysDeptVo;
 
 import java.util.Collection;
 import java.util.List;
@@ -30,7 +32,8 @@ public interface IPpScGroupService {
      * @return 素材分组列表
      */
     List<PpScGroupVo> queryList(PpScGroupBo bo);
-
+    List<Tree<Long>> selectScGroupTreeList(PpScGroupBo bo);
+    List<Tree<Long>> buildDeptTreeSelect(List<PpScGroupVo> groups);
     /**
      * 新增素材分组
      *
@@ -55,4 +58,7 @@ public interface IPpScGroupService {
      * @return 是否删除成功
      */
     Boolean deleteWithValidByIds(Collection<Long> ids, Boolean isValid);
+
+
+
 }

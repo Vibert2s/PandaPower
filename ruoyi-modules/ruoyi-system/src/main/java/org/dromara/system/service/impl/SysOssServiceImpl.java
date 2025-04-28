@@ -29,18 +29,22 @@ import org.dromara.system.domain.vo.SysOssVo;
 import org.dromara.system.mapper.SysOssMapper;
 import org.dromara.system.service.ISysOssService;
 import org.jetbrains.annotations.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 文件上传 服务层实现
@@ -52,8 +56,7 @@ import java.util.Map;
 public class SysOssServiceImpl implements ISysOssService, OssService {
 
     private final SysOssMapper baseMapper;
-
-    /**
+  /**
      * 查询OSS对象存储列表
      *
      * @param bo        OSS对象存储分页查询对象
@@ -91,6 +94,88 @@ public class SysOssServiceImpl implements ISysOssService, OssService {
             }
         }
         return list;
+    }
+
+    @Override
+    public void preview(Long ossId, HttpServletResponse response) throws IOException {
+        SysOssServiceImpl ossService = SpringUtils.getAopProxy(this);
+        SysOssVo oss = ossService.getById(ossId);
+        if (ObjectUtil.isNull(oss)) {
+            throw new ServiceException("文件数据不存在");
+        }
+
+        // 根据文件类型设置响应头
+        String contentType = getContentType(oss.getFileName());
+        response.setContentType(contentType);
+
+        // 获取并写入文件流
+        try {
+            // 获取OSS存储客户端
+            OssClient storage = OssFactory.instance(oss.getService());
+
+            // 使用getObjectContent获取文件输入流
+            try (InputStream inputStream = storage.getObjectContent(oss.getUrl())) {
+                // 判断是否为图片类型
+                if (contentType.startsWith("image/")) {
+                    // 压缩图片
+                    BufferedImage originalImage = ImageIO.read(inputStream);
+                    if (originalImage != null) {
+                        // 计算压缩后的尺寸（例如：宽度最大800像素，保持原比例）
+                        int maxWidth = 800;
+                        int newWidth = Math.min(originalImage.getWidth(), maxWidth);
+                        int newHeight = (int) (originalImage.getHeight() * ((double) newWidth / originalImage.getWidth()));
+
+                        // 创建缩略图
+                        BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+                        Graphics2D g = resizedImage.createGraphics();
+                        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                        g.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
+                        g.dispose();
+
+                        // 获取图片格式
+                        String formatName = oss.getFileSuffix().toLowerCase().replace(".", "");
+                        if (!Arrays.asList("jpg", "jpeg", "png", "gif", "bmp").contains(formatName)) {
+                            formatName = "jpeg"; // 默认使用JPEG格式
+                        }
+
+                        // 输出压缩图片
+                        ImageIO.write(resizedImage, formatName, response.getOutputStream());
+                    } else {
+                        // 如果无法读取为图片，则直接传输原始数据
+                        inputStream.reset(); // 重置输入流
+                        FileUtils.copyStream(inputStream, response.getOutputStream());
+                    }
+                } else {
+                    // 非图片类型直接传输
+                    FileUtils.copyStream(inputStream, response.getOutputStream());
+                }
+            }
+        } catch (Exception e) {
+            throw new ServiceException("预览文件出现异常: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 根据文件名获取Content-Type
+     */
+    private String getContentType(String fileName) {
+        String suffix = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+        switch (suffix) {
+            case ".jpg":
+            case ".jpeg":
+                return "image/jpeg";
+            case ".png":
+                return "image/png";
+            case ".gif":
+                return "image/gif";
+            case ".bmp":
+                return "image/bmp";
+            case ".webp":
+                return "image/webp";
+            // 可以添加更多图片类型
+            default:
+                return "application/octet-stream";
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package org.dromara.test;
 
 import org.dromara.common.web.config.properties.CaptchaProperties;
+import org.dromara.common.websocket.utils.WebSocketUtils;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,7 +40,11 @@ public class DemoUnitTest {
         Thread.sleep(3000);
         System.out.println(captchaProperties);
     }
-
+    @DisplayName("测试 publishAll 方法")
+    @Test
+    public void publishAll() {
+        WebSocketUtils.publishAll("2312312323");
+    }
 
     @DisplayName("测试 @RepeatedTest 注解")
     @RepeatedTest(3)

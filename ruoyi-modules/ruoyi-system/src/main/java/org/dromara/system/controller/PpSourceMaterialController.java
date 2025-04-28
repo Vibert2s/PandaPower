@@ -2,10 +2,19 @@ package org.dromara.system.controller;
 
 import java.util.List;
 
+import cn.hutool.core.lang.tree.Tree;
+import cn.hutool.core.util.ObjectUtil;
 import lombok.RequiredArgsConstructor;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.*;
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import org.dromara.system.domain.bo.PpScGroupBo;
+import org.dromara.system.domain.bo.SysUserBo;
+import org.dromara.system.domain.vo.SysOssUploadVo;
+import org.dromara.system.domain.vo.SysOssVo;
+import org.dromara.system.service.IPpScGroupService;
+import org.dromara.system.service.ISysOssService;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 import org.dromara.common.idempotent.annotation.RepeatSubmit;
@@ -21,6 +30,7 @@ import org.dromara.system.domain.vo.PpSourceMaterialVo;
 import org.dromara.system.domain.bo.PpSourceMaterialBo;
 import org.dromara.system.service.IPpSourceMaterialService;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 素材库
@@ -35,7 +45,8 @@ import org.dromara.common.mybatis.core.page.TableDataInfo;
 public class PpSourceMaterialController extends BaseController {
 
     private final IPpSourceMaterialService ppSourceMaterialService;
-
+    private final IPpScGroupService ppScGroupService;
+    private final ISysOssService ossService;
     /**
      * 查询素材库列表
      */
@@ -101,5 +112,16 @@ public class PpSourceMaterialController extends BaseController {
     public R<Void> remove(@NotEmpty(message = "主键不能为空")
                           @PathVariable Long[] ids) {
         return toAjax(ppSourceMaterialService.deleteWithValidByIds(List.of(ids), true));
+    }
+    @SaCheckPermission("system:user:list")
+    @GetMapping("/scGroupTree")
+    public R<List<Tree<Long>>> deptTree(PpScGroupBo groupBo) {
+        return R.ok(ppScGroupService.selectScGroupTreeList(groupBo));
+    }
+    @SaCheckPermission("system:user:edit")
+    @Log(title = "素材管理", businessType = BusinessType.UPDATE)
+    @PutMapping("/changeStatus")
+    public R<Void> changeStatus(@RequestBody PpSourceMaterialBo bo) {
+        return toAjax(ppSourceMaterialService.updateScStatus(bo.getId(), bo.getStatus()));
     }
 }

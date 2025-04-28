@@ -21,7 +21,7 @@ import jakarta.validation.constraints.*;
 public class PpSourceMaterialBo extends BaseEntity {
 
     /**
-     * 
+     *
      */
     @NotNull(message = "不能为空", groups = { EditGroup.class })
     private Long id;
@@ -34,7 +34,7 @@ public class PpSourceMaterialBo extends BaseEntity {
     /**
      * 文件id
      */
-    private Long oosId;
+    private String ossId;
 
     /**
      * 原数据
@@ -50,6 +50,8 @@ public class PpSourceMaterialBo extends BaseEntity {
      * 状态
      */
     private String status;
+
+    private String file;
 
 
 }

@@ -1,5 +1,9 @@
 package org.dromara.system.service.impl;
 
+import cn.dev33.satoken.annotation.SaCheckPermission;
+import cn.hutool.core.lang.tree.Tree;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import org.dromara.common.core.domain.R;
 import org.dromara.common.core.utils.MapstructUtils;
 import org.dromara.common.core.utils.StringUtils;
 import org.dromara.common.mybatis.core.page.TableDataInfo;
@@ -8,13 +12,22 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.RequiredArgsConstructor;
+import org.dromara.system.domain.SysUser;
+import org.dromara.system.domain.bo.PpScGroupBo;
+import org.dromara.system.domain.bo.SysDeptBo;
+import org.dromara.system.domain.vo.SysOssVo;
+import org.dromara.system.mapper.SysOssMapper;
+import org.dromara.system.service.IPpScGroupService;
+import org.dromara.system.service.ISysDeptService;
 import org.springframework.stereotype.Service;
 import org.dromara.system.domain.bo.PpSourceMaterialBo;
 import org.dromara.system.domain.vo.PpSourceMaterialVo;
 import org.dromara.system.domain.PpSourceMaterial;
 import org.dromara.system.mapper.PpSourceMaterialMapper;
 import org.dromara.system.service.IPpSourceMaterialService;
+import org.springframework.web.bind.annotation.GetMapping;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Collection;
@@ -30,8 +43,8 @@ import java.util.Collection;
 public class PpSourceMaterialServiceImpl implements IPpSourceMaterialService {
 
     private final PpSourceMaterialMapper baseMapper;
-
-    /**
+    private final SysOssMapper sysOssMapper;
+      /**
      * 查询素材库
      *
      * @param id 主键
@@ -73,9 +86,10 @@ public class PpSourceMaterialServiceImpl implements IPpSourceMaterialService {
         LambdaQueryWrapper<PpSourceMaterial> lqw = Wrappers.lambdaQuery();
         lqw.orderByAsc(PpSourceMaterial::getId);
         lqw.eq(bo.getGroupId() != null, PpSourceMaterial::getGroupId, bo.getGroupId());
-        lqw.eq(StringUtils.isNotBlank(bo.getOriginalData()), PpSourceMaterial::getOriginalData, bo.getOriginalData());
+        lqw.like(StringUtils.isNotBlank(bo.getOriginalData()), PpSourceMaterial::getOriginalData, bo.getOriginalData());
         lqw.eq(StringUtils.isNotBlank(bo.getType()), PpSourceMaterial::getType, bo.getType());
         lqw.eq(StringUtils.isNotBlank(bo.getStatus()), PpSourceMaterial::getStatus, bo.getStatus());
+        lqw.eq(bo.getOssId() != null, PpSourceMaterial::getOssId, bo.getOssId());
         return lqw;
     }
 
@@ -87,11 +101,22 @@ public class PpSourceMaterialServiceImpl implements IPpSourceMaterialService {
      */
     @Override
     public Boolean insertByBo(PpSourceMaterialBo bo) {
-        PpSourceMaterial add = MapstructUtils.convert(bo, PpSourceMaterial.class);
-        validEntityBeforeSave(add);
-        boolean flag = baseMapper.insert(add) > 0;
-        if (flag) {
-            bo.setId(add.getId());
+
+        boolean flag = false;
+        if(bo.getType().equals("3")||bo.getType().equals("4")){
+            String[] ossids = bo.getFile().split(",");
+            for (String ossid : ossids) {
+                bo.setOssId(ossid);
+                SysOssVo sysOssVo = sysOssMapper.selectVoById(bo.getOssId());
+                bo.setOriginalData(sysOssVo.getOriginalName());
+                PpSourceMaterial add = MapstructUtils.convert(bo, PpSourceMaterial.class);
+                validEntityBeforeSave(add);
+                flag = baseMapper.insert(add) > 0;
+            }
+        }else {
+            PpSourceMaterial add = MapstructUtils.convert(bo, PpSourceMaterial.class);
+            //没有附件的时候
+            flag = baseMapper.insert(add) > 0;
         }
         return flag;
     }
@@ -128,6 +153,25 @@ public class PpSourceMaterialServiceImpl implements IPpSourceMaterialService {
         if(isValid){
             //TODO 做一些业务上的校验,判断是否需要校验
         }
+        Collection<Long> OssIds = new ArrayList<>();
+        for (Long id : ids) {
+            PpSourceMaterial sourceMaterialVo = baseMapper.selectById(id);
+            if(sourceMaterialVo.getOssId()==null){
+                continue;
+            }
+            OssIds.add(sourceMaterialVo.getOssId());
+        }
+        if(!OssIds.isEmpty()){
+            sysOssMapper.deleteByIds(OssIds);
+        }
         return baseMapper.deleteByIds(ids) > 0;
     }
+    @Override
+    public int updateScStatus(Long id, String status) {
+        return baseMapper.update(null,
+            new LambdaUpdateWrapper<PpSourceMaterial>()
+                .set(PpSourceMaterial::getStatus, status)
+                .eq(PpSourceMaterial::getId, id));
+    }
+
 }

@@ -35,7 +35,7 @@ public interface ISysOssService {
      * @return 包含 SysOssVo 对象的列表
      */
     List<SysOssVo> listByIds(Collection<Long> ossIds);
-
+    void preview(Long ossId, HttpServletResponse response) throws IOException;
     /**
      * 根据 ossId 从缓存或数据库中获取 SysOssVo 对象
      *
